@@ -3,22 +3,22 @@ library(ggplot2)
 library(magrittr)
 
 options(datatable.print.class = TRUE)
-head(fb)
 
 fb <- fread("data/dataset_Facebook.csv")
 summary(fb)
+head(fb)
 
 colnames(fb)
-#A szókozök gondot okoznak a datatableban, ezeket _-vel helyettesítem
+#A szókozök gondot okoznak a datatableben, ezeket _-vel helyettesítem
 colnames(fb) <- gsub(" ", "_", colnames(fb))
 #Néhány változót nagybetűvel írtak
 colnames(fb) <- tolower(colnames(fb))
 
 
-ggplot(fb, aes(Page_total_likes)) + geom_histogram()
+ggplot(fb, aes(page_total_likes)) + geom_histogram(bins = 10)
 #nincs kiugró érték
 
-ggplot(fb, aes(like)) + geom_histogram()
+ggplot(fb, aes(like)) + geom_histogram(bins = 10)
 fb[like > 1000][order(-like)]
 #5172 nagyon kiugró
 
@@ -27,7 +27,7 @@ clearOutlierLike <- function(fb) {
 }
 
 
-ggplot(fb, aes(share)) + geom_histogram()
+ggplot(fb, aes(share)) + geom_histogram(bins = 10)
 fb[share > 100][order(-share)]
 #790 kiugró
 
@@ -36,7 +36,7 @@ clearOutlierShare <- function(fb) {
 }
 
 
-ggplot(fb, aes(comment)) + geom_histogram()
+ggplot(fb, aes(comment)) + geom_histogram(bins = 10)
 fb[comment > 60][order(-comment)]
 #372 kiugró, 3 db >100
 
