@@ -49,12 +49,12 @@ crime_s_h[, OFFENSE_CODE_GROUP := factor(OFFENSE_CODE_GROUP)]
 crimeplot <-ggplot(crime_s_h, aes(x = HOUR, y = N)) 
 
 crimeplot +
-  geom_col(width = 0.8, max = 255) +
-    facet_grid(rows = vars(OFFENSE_CODE_GROUP), scales = "free") +
+  geom_col(width = 0.8) +
+    facet_wrap(.~OFFENSE_CODE_GROUP, scales = "free", nrow = 5, strip.position="top") +
     theme_minimal() +
-    ylab("Number of crimes") +
-    xlab("Hour") +
-    labs(title = "The 5 most common shooting crimes")
+    labs(title = "The 5 most common shooting crimes",
+x = "Hour",
+y = "Number of crimes")
 ```
 
 #A markdown fájlban a kód mellett írjatok pár szót arról is, hogy milyen mintázatot fedeztek fel az adatban, és annak milyen lehetséges magyarázata van.
