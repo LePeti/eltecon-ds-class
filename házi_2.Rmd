@@ -50,7 +50,7 @@ crimeplot <-ggplot(crime_s_h, aes(x = HOUR, y = N))
 
 crimeplot +
   geom_col(width = 0.8) +
-    facet_wrap(.~OFFENSE_CODE_GROUP, scales = "free", nrow = 5, strip.position="top") +
+    facet_wrap(.~OFFENSE_CODE_GROUP, scales = "free_y", nrow = 5, strip.position = "top") +
     theme_minimal() +
     labs(title = "The 5 most common shooting crimes",
 x = "Hour",
@@ -59,4 +59,4 @@ y = "Number of crimes")
 
 #A markdown fájlban a kód mellett írjatok pár szót arról is, hogy milyen mintázatot fedeztek fel az adatban, és annak milyen lehetséges magyarázata van.
 
-
+#Délelőtt kevesebb a (bejelentett) lövöldözések száma minden kategóriában. Ennek oka talán az lehet, hogy általában nem bűnelkövetéssel kezdik a napot az emebrek. Este és hajnalban, amikor sötét van sokkal gyakoribb.
