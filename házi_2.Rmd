@@ -13,22 +13,14 @@ This is an R Markdown document. Markdown is a simple formatting syntax for autho
 
 When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
 
-```{r cars}
-summary(cars)
+```{r}
+suppressPackageStartupMessages(library(data.table))
+suppressPackageStartupMessages(library(ggplot2))
+suppressPackageStartupMessages(library(magrittr))
 ```
-
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
 
 ```{r}
-crime_raw <- fread("data/crime.csv")
+crime <- fread("data/crime.csv")
 ```
 
 # Az órai adatból kiindulva (crime.csv), csináljátok végig a következő lépéseket:
@@ -45,16 +37,24 @@ common_5_1c
 2. az eredeti adattáblát szűrjétek le azokra a sorokra, ahol a "SHOOTING" értéke "Y", ÉS az "OFFENSE_CODE_GROUP" oszlop értéke az 1.-es pontban kiszámolt 5 leggyakoribb valamelyike.
 
 ```{r}
-crime_f <- crime[SHOOTING == "Y" & OFFENSE_CODE_GROUP %in% common_5_1c]
-crime_f
+crime_s <- crime[SHOOTING == "Y" & OFFENSE_CODE_GROUP %in% common_5_1c]
+crime_s
 ```
 3. Vizualizáljátok ezen bűnesetek gyakoriságát, órák szerint, és valamilyen módon (szín, facet, stb.) elkülönítve egymástól az 5 "OFFENSE_CODE_GROUP"-ot.
 
 ```{r}
-crime_f_h <- crime_f[, .N, by = .(HOUR, OFFENSE_CODE_GROUP)]
-crime_f_h[, OFFENSE_CODE_GROUP := factor(OFFENSE_CODE_GROUP)]
-ggplot(crime_f_h, aes(x = HOUR)) + geom_bar() +
-  facet_wrap(.~OFFENSE_CODE_GROUP, nrow = 5)
+crime_s_h <- crime_s[, .N, by = .(HOUR, OFFENSE_CODE_GROUP)]
+crime_s_h[, OFFENSE_CODE_GROUP := factor(OFFENSE_CODE_GROUP)]
+
+crimeplot <-ggplot(crime_s_h, aes(x = HOUR, y = N)) 
+
+crimeplot +
+  geom_col(width = 0.8, max = 255) +
+    facet_grid(rows = vars(OFFENSE_CODE_GROUP), scales = "free") +
+    theme_minimal() +
+    ylab("Number of crimes") +
+    xlab("Hour") +
+    labs(title = "The 5 most common shooting crimes")
 ```
 
 #A markdown fájlban a kód mellett írjatok pár szót arról is, hogy milyen mintázatot fedeztek fel az adatban, és annak milyen lehetséges magyarázata van.
