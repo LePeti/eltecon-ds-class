@@ -1,0 +1,62 @@
+---
+title: "Házi_2"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+```{r}
+crime_raw <- fread("data/crime.csv")
+```
+
+# Az órai adatból kiindulva (crime.csv), csináljátok végig a következő lépéseket:
+1. az adattáblában keressétek meg, hogy melyik az 5 leggyakoribb "OFFENSE_CODE_GROUP", csak azokra a sorokra leszűrve, ahol a "SHOOTING" értéke "Y".
+
+```{r}
+common_5 <- crime[SHOOTING == "Y", .N, by = OFFENSE_CODE_GROUP][order(-N)] %>%
+  .[1:5,]
+common_5_1c <- common_5[[1]]
+class(common_5_1c)
+common_5_1c
+```
+
+2. az eredeti adattáblát szűrjétek le azokra a sorokra, ahol a "SHOOTING" értéke "Y", ÉS az "OFFENSE_CODE_GROUP" oszlop értéke az 1.-es pontban kiszámolt 5 leggyakoribb valamelyike.
+
+```{r}
+crime_f <- crime[SHOOTING == "Y" & OFFENSE_CODE_GROUP %in% common_5_1c]
+crime_f
+```
+3. Vizualizáljátok ezen bűnesetek gyakoriságát, órák szerint, és valamilyen módon (szín, facet, stb.) elkülönítve egymástól az 5 "OFFENSE_CODE_GROUP"-ot.
+
+```{r}
+crime_f_h <- crime_f[, .N, by = .(HOUR, OFFENSE_CODE_GROUP)]
+crime_f_h[, OFFENSE_CODE_GROUP := factor(OFFENSE_CODE_GROUP)]
+ggplot(crime_f_h, aes(x = HOUR)) + geom_bar() +
+  facet_wrap(.~OFFENSE_CODE_GROUP, nrow = 5)
+```
+
+#A markdown fájlban a kód mellett írjatok pár szót arról is, hogy milyen mintázatot fedeztek fel az adatban, és annak milyen lehetséges magyarázata van.
+
+
