@@ -61,7 +61,7 @@ fb[, lapply(.SD, uniqueN)] #nincsenek duplikátumok
 
 
 ### 3. házi
-# fizetett tartalomnak van-e hatása a likeok számára
+#A hirdetés befolyásolják-e a kedvelések számát?
 mean_like_dt <- fb[, 
               .(mean_like = mean(like, na.rm = TRUE), var_like = var(like, na.rm = TRUE)), 
               by = paid]
