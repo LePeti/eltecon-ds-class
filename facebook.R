@@ -59,7 +59,8 @@ fb[, total_interactions := comment + like + share]
 
 fb[, lapply(.SD, uniqueN)] #nincsenek duplikátumok
 
-# 3. házi
+
+### 3. házi
 # fizetett tartalomnak van-e hatása a likeok számára
 mean_like_dt <- fb[, 
               .(mean_like = mean(like, na.rm = TRUE), var_like = var(like, na.rm = TRUE)), 
@@ -76,8 +77,8 @@ mean_like_dt %>%
 
 #Nem szignifikáns a különbség
 
-#Monte-Carlo
-#mintánként számolja ki az átlagot
+##Monte-Carlo
+#Mintánként számolja ki az átlagot
 set.seed(1234)
 mean_like_mc_samples <- map_df(1:1000, ~{
                 mean_like_dt[,
@@ -100,69 +101,46 @@ uplift_mc_samples <- mean_like_mc_samples_cast[,
                                                uplift := (paid / not_paid - 1)]
 
 ggplot(uplift_mc_samples, aes(x = uplift)) +
-  geom_histogram() +
+  geom_histogram(bins = 100) +
   geom_vline(
     xintercept = uplift_mc_samples[, mean(uplift)],
     color = "blue"
   ) +
   geom_vline(
-    xintercept = uplift_mc_samples[, quantile(uplift, 0.025, na.rm = TRUE)],
+    xintercept = uplift_mc_samples[, quantile(uplift, 0.025)],
     color = "red"
   ) +
   geom_vline(
-    xintercept = uplift_mc_samples[, quantile(uplift, 0.975, na.rm = TRUE)],
+    xintercept = uplift_mc_samples[, quantile(uplift, 0.975)],
     color = "red"
-  )
-
-#Bootstrapping
-set.seed(1)
-single_sample <- fb[sample(.N, .N, replace = TRUE)] %>%
-  .[,
-    .(bootstrap_id = 1,
-      mean_like = mean(like)),
-    by = paid
-    ] %>%
-  dcast(bootstrap_id ~ paid, value.var = "mean_like")
-  
-  colnames(single_sample)[2] = "not_paid"
-  colnames(single_sample)[3] = "paid"
-  
-  single_sample[, uplift := paid / not_paid - 1]
-
-ggplot() +
-  geom_histogram(
-    data = single_sample,
-    mapping = aes(x = uplift),
-    fill = "red"
   ) +
-  xlim(c(-0.12, 0.5))
+  xlim(c(-50, 50))
+
+##Bootstrapping
+fb_r_na <- fb[is.na(paid) == FALSE & is.na(like) == FALSE]
 
 set.seed(1234)
 bootstrapped_stats <- map_df(1:10000, ~{
-  fb[sample(.N, .N, replace = TRUE)] %>%
+  fb_r_na[sample(.N, .N, replace = TRUE)] %>%
     .[,
-      .(bootstrap_id = .x,
-        mean_like = mean(like)),
+      .(bootstrap_id = .x, mean_like = mean(like)),
       by = paid
       ]
 })
 
 bs_uplift <- dcast(bootstrapped_stats, bootstrap_id ~ paid, value.var = "mean_like")
 
-colnames(bs_uplift)[3] = "not_paid"
-colnames(bs_uplift)[4] = "paid"
+colnames(bs_uplift)[2] = "not_paid"
+colnames(bs_uplift)[3] = "paid"
 
 bs_uplift[, uplift := paid / not_paid - 1]
-
-#bs_uplift %>% .[]
 
 ggplot(bs_uplift, aes(x = uplift)) + geom_histogram()
 
 CI_from_bs <- bs_uplift[, .(
-  CI_lower = quantile(uplift, 0.025, na.rm = TRUE),
-  CI_higher = quantile(uplift, 0.975, na.rm = TRUE)
+  CI_lower = quantile(uplift, 0.025),
+  CI_higher = quantile(uplift, 0.975)
 )]
-CI_from_bs
 
 ggplot(bs_uplift, aes(x = uplift)) +
   geom_histogram(bins = 100) +
