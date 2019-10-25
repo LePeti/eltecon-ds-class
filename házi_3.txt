@@ -1,8 +1,8 @@
 Nem tudtam semminek a rátáját venni, ezért az átlagokat hasonlítottam össze.
 
-Amit vizsgáltam: a hirdetések befolyásolják-e a kedvelések számát?
+Amit vizsgáltam: a hirdetés befolyásolja-e a kedvelések számát?
 (Paid: hirdetésként is megjelent a tartalom)
 
 A valóságban nagyobb lehet a hatás. A mintában lévő oldalak viszonylag kevés követővel rendelkeznek,
-ismertebb ... esetén ez sokkal nagyobb lehet.
+az ismertebbek esetén a hatás sokkal nagyobb lehet.
 
