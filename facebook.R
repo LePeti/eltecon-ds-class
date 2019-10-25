@@ -87,6 +87,8 @@ mean_like_mc_samples <- map_df(1:1000, ~{
     , mean(samples), by = paid
   ]
 })
+mc_sample = 1:500
+mean_like_mc_samples <- like_mc_samples[, mean(s), by = paid]
 
 
 mean_like_mc_samples_cast <- dcast(
