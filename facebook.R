@@ -1,6 +1,7 @@
 library(data.table)
 library(ggplot2)
 library(magrittr)
+library(purrr)
 
 options(datatable.print.class = TRUE)
 
@@ -57,3 +58,114 @@ clearOutlierComment(fb)
 fb[, total_interactions := comment + like + share]
 
 fb[, lapply(.SD, uniqueN)] #nincsenek duplikátumok
+
+# 3. házi
+# fizetett tartalomnak van-e hatása a likeok számára
+mean_like_dt <- fb[, 
+              .(mean_like = mean(like, na.rm = TRUE)), by = paid]
+
+var_like = var(fb$like, na.rm = TRUE)
+
+
+mean_like_dt %>%
+  .[, var_like := .(var_like)] %>%
+  .[, CI_lower := mean_like - (1.96 * sqrt(var_like))] %>%
+  .[, CI_higher := mean_like + (1.96 * sqrt(var_like))] %>%
+  ggplot(aes(x = paid, y = mean_like)) +
+  geom_col() +
+  geom_errorbar(aes(ymin = CI_lower, ymax = CI_higher))
+
+#Nem szignifikáns a különbség
+
+#Monte-Carlo
+set.seed(1234)
+#mintánként számolja ki az átlagot
+mean_like_mc_samples <- map_df(1:1000, ~{
+  mean_like_dt[,
+               .(mean_like_mc = mean(rnorm(500, mean_like, var_like)),
+                 by = paid)
+  ]
+})
+
+#nem jó var_like és mean_like kül. paid szerint
+
+mean_like_mc_samples_cast <- dcast(
+  mean_like_mc_samples, mc_sample ~ paid, value.var = "mean_like_mc"
+)
+
+colnames(mean_like_mc_samples_cast)[3] = "not_paid"
+colnames(mean_like_mc_samples_cast)[4] = "paid"
+
+uplift_from_mc_samples <- copy(mean_like_mc_samples_cast) %>%
+  .[, uplift := paid / not_paid - 1]
+
+ggplot(uplift_from_mc_samples, aes(x = uplift)) +
+  geom_histogram(bins = 10) +
+  geom_vline(
+    xintercept = uplift_from_mc_samples[, mean(uplift)],
+    color = "blue"
+  ) +
+  geom_vline(
+    xintercept = uplift_from_mc_samples[, quantile(uplift, 0.025, na.rm = TRUE)],
+    color = "red"
+  ) +
+  geom_vline(
+    xintercept = uplift_from_mc_samples[, quantile(uplift, 0.975, na.rm = TRUE)],
+    color = "red"
+  )
+
+#Bootstrapping
+set.seed(1)
+single_sample <- fb[sample(.N, .N, replace = TRUE)] %>%
+  .[,
+    .(bootstrap_id = 1,
+      mean_like = mean(like)),
+    by = paid
+    ] %>%
+  dcast(bootstrap_id ~ paid, value.var = "mean_like")
+  
+  colnames(single_sample)[3] = "not_paid"
+  colnames(single_sample)[4] = "paid"
+  
+  single_sample[, uplift := paid / not_paid - 1]
+
+ggplot() +
+  geom_histogram(
+    data = single_sample,
+    mapping = aes(x = uplift),
+    fill = "red"
+  ) +
+  xlim(c(-0.12, 0.5))
+
+set.seed(1234)
+bootstrapped_stats <- map_df(1:10000, ~{
+  fb[sample(.N, .N, replace = TRUE)] %>%
+    .[,
+      .(bootstrap_id = .x,
+        mean_like = mean(like)),
+      by = paid
+      ]
+})
+
+bs_uplift <- dcast(bootstrapped_stats, bootstrap_id ~ paid, value.var = "mean_like")
+
+colnames(bs_uplift)[3] = "not_paid"
+colnames(bs_uplift)[4] = "paid"
+
+bs_uplift[, uplift := paid / not_paid - 1]
+
+#bs_uplift %>% .[]
+
+ggplot(bs_uplift, aes(x = uplift)) + geom_histogram()
+
+CI_from_bs <- bs_uplift[, .(
+  CI_lower = quantile(uplift, 0.025, na.rm = TRUE),
+  CI_higher = quantile(uplift, 0.975, na.rm = TRUE)
+)]
+CI_from_bs
+
+ggplot(bs_uplift, aes(x = uplift)) +
+  geom_histogram(bins = 100) +
+  geom_vline(xintercept = CI_from_bs[, CI_lower], color = "red") +
+  geom_vline(xintercept = CI_from_bs[, CI_higher], color = "red")
+
