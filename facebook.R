@@ -62,13 +62,12 @@ fb[, lapply(.SD, uniqueN)] #nincsenek duplikátumok
 # 3. házi
 # fizetett tartalomnak van-e hatása a likeok számára
 mean_like_dt <- fb[, 
-              .(mean_like = mean(like, na.rm = TRUE)), by = paid]
+              .(mean_like = mean(like, na.rm = TRUE), var_like = var(like, na.rm = TRUE)), 
+              by = paid]
 
-var_like = var(fb$like, na.rm = TRUE)
-
+mean_like_dt <- mean_like_dt[1:2, ] #NA-k kiszűrése
 
 mean_like_dt %>%
-  .[, var_like := .(var_like)] %>%
   .[, CI_lower := mean_like - (1.96 * sqrt(var_like))] %>%
   .[, CI_higher := mean_like + (1.96 * sqrt(var_like))] %>%
   ggplot(aes(x = paid, y = mean_like)) +
@@ -81,13 +80,14 @@ mean_like_dt %>%
 set.seed(1234)
 #mintánként számolja ki az átlagot
 mean_like_mc_samples <- map_df(1:1000, ~{
-  mean_like_dt[,
-               .(mean_like_mc = mean(rnorm(500, mean_like, var_like)),
-                 by = paid)
+                mean_like_dt[,
+               .(samples = rnorm(500, mean_like, var_like)),
+                 by = paid
+  ] %>% .[
+    , mean(samples), by = paid
   ]
 })
 
-#nem jó var_like és mean_like kül. paid szerint
 
 mean_like_mc_samples_cast <- dcast(
   mean_like_mc_samples, mc_sample ~ paid, value.var = "mean_like_mc"
