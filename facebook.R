@@ -77,42 +77,40 @@ mean_like_dt %>%
 #Nem szignifikáns a különbség
 
 #Monte-Carlo
-set.seed(1234)
 #mintánként számolja ki az átlagot
+set.seed(1234)
 mean_like_mc_samples <- map_df(1:1000, ~{
                 mean_like_dt[,
                .(samples = rnorm(500, mean_like, var_like)),
                  by = paid
-  ] %>% .[
-    , mean(samples), by = paid
-  ]
-})
-mc_sample = 1:500
-mean_like_mc_samples <- like_mc_samples[, mean(s), by = paid]
+  ] %>% .[, .(mean_like_mc = mean(samples)), by = paid
+  ]})
 
+mean_like_mc_samples <- mean_like_mc_samples[, .(mc_sample = 1:1000, mean_like_mc), 
+                                             by = paid]
 
 mean_like_mc_samples_cast <- dcast(
   mean_like_mc_samples, mc_sample ~ paid, value.var = "mean_like_mc"
 )
 
-colnames(mean_like_mc_samples_cast)[3] = "not_paid"
-colnames(mean_like_mc_samples_cast)[4] = "paid"
+colnames(mean_like_mc_samples_cast)[2] = "not_paid"
+colnames(mean_like_mc_samples_cast)[3] = "paid"
 
-uplift_from_mc_samples <- copy(mean_like_mc_samples_cast) %>%
-  .[, uplift := paid / not_paid - 1]
+uplift_mc_samples <- mean_like_mc_samples_cast[, 
+                                               uplift := (paid / not_paid - 1)]
 
-ggplot(uplift_from_mc_samples, aes(x = uplift)) +
-  geom_histogram(bins = 10) +
+ggplot(uplift_mc_samples, aes(x = uplift)) +
+  geom_histogram() +
   geom_vline(
-    xintercept = uplift_from_mc_samples[, mean(uplift)],
+    xintercept = uplift_mc_samples[, mean(uplift)],
     color = "blue"
   ) +
   geom_vline(
-    xintercept = uplift_from_mc_samples[, quantile(uplift, 0.025, na.rm = TRUE)],
+    xintercept = uplift_mc_samples[, quantile(uplift, 0.025, na.rm = TRUE)],
     color = "red"
   ) +
   geom_vline(
-    xintercept = uplift_from_mc_samples[, quantile(uplift, 0.975, na.rm = TRUE)],
+    xintercept = uplift_mc_samples[, quantile(uplift, 0.975, na.rm = TRUE)],
     color = "red"
   )
 
@@ -126,8 +124,8 @@ single_sample <- fb[sample(.N, .N, replace = TRUE)] %>%
     ] %>%
   dcast(bootstrap_id ~ paid, value.var = "mean_like")
   
-  colnames(single_sample)[3] = "not_paid"
-  colnames(single_sample)[4] = "paid"
+  colnames(single_sample)[2] = "not_paid"
+  colnames(single_sample)[3] = "paid"
   
   single_sample[, uplift := paid / not_paid - 1]
 
