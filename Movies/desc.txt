@@ -1,0 +1,32 @@
+https://www.kaggle.com/stefanoleone992/filmtv-movies-dataset
+
+Context
+Movies data are available on IMDb and many other websites with average votes, vote numbers, reviews and descriptions. 
+While IMDb is the most trustworthy source for data, other websites as FilmTV.it can provide the information on how users 
+from different countries rate the movies compared to each other.
+
+Content
+Each row represents a movie available on FilmTV.it, with the original title, year, genre, duration, country, director, actors, average vote and votes. 
+The fie in the English version contains 52,536 movies and 12 attributes, 
+while the Italian version contains one extra-attribute for the local title used when the movie was published in Italy.
+
+Acknowledgements
+Data has been scraped from the publicly available website https://www.filmtv.it.
+
+Inspiration
+The purpose of this dataset is to provide data regarding the rates and the number of votes assigned to each film by Italian users, 
+which can be compared with data available on other movie-related websites.
+
+Columns
+filmtv_idunique identifier on Film TV
+titlemovie title
+yearmovie year
+genremovie genre
+durationmovie duration (in minutes)
+countrymovie country/ies
+directormovie director
+actorsmovie actors
+avg_voteavg review
+votesn. of reviews
+descriptionmovie description
+notesmovie notes
