@@ -1,0 +1,113 @@
+---
+  
+  ```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(fig.width = 12)
+knitr::opts_chunk$set(fig.align = 'center')
+```
+
+
+```{r}
+library(data.table)
+library(ggplot2)
+library(magrittr)
+library(purrr)
+library(fastDummies)
+```
+
+
+```{r}
+filmtv <- fread("data/filmtv_movies.csv", stringsAsFactors = TRUE)
+summary(filmtv)
+levels(filmtv$genre)
+```
+
+
+```{r}
+ggplot(filmtv, aes(duration)) +
+  geom_histogram()
+ggplot(filmtv, aes(duration)) +
+  geom_histogram() +
+  facet_wrap(~genre, scales = "free")
+
+filmtv[duration > 500, .N, by = genre] #21
+filmtv_mod <- filmtv[duration > 500, duration := NA]
+```
+
+
+```{r}
+filmtv_mod <- filmtv[genre == "" | genre == "MÃ©lo", genre := NA]
+filmtv_mod[, genre := droplevels(genre)]
+summary(filmtv_mod)
+filmtv_mod[, .N, by = genre]
+levels(filmtv_mod$genre)
+```
+
+
+```{r}
+drop_na <- filmtv_mod[genre != is.na(genre)]
+drop_na <- drop_na[duration != is.na(duration)]
+levels(drop_na$genre)
+summary(drop_na)
+filmtv_mod_genre_dummies <- dummy_cols(drop_na, select_columns = "genre")
+```
+
+
+#4. házi
+#2. Van-e hatása a szavazatok számának az átlagos értékelésre?
+#3a
+```{r}
+ggplot(filmtv_mod_genre_dummies, aes(x = votes, y = avg_vote)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+```
+
+
+#b
+```{r}
+filmtv_mod_numeric <- filmtv_mod_genre_dummies[, c(5, 9, 10, 13:38)]
+corr <- cor(filmtv_mod_numeric)
+corr[corr > abs(0.15) & corr!= abs(1)]
+```
+
+
+#c, d
+```{r}
+reg <- lm(avg_vote ~ . - genre_Western - votes - duration, data = filmtv_mod_numeric)
+summary(reg)
+residuals <- data.table(residuals = reg$residuals, fitted = reg$fitted.values)
+ggplot(residuals, aes(fitted, residuals)) +
+  geom_point(alpha = .3) +
+  theme_minimal()
+#véletlenszerûnek tûnik
+```
+
+
+#e
+```{r}
+reg <- lm(avg_vote ~ . - genre_Western + I(votes^2), data = filmtv_mod_numeric)
+summary(reg)
+residuals <- data.table(residuals = reg$residuals, fitted = reg$fitted.values)
+ggplot(residuals, aes(fitted, residuals)) +
+  geom_point(alpha = .3) +
+  theme_minimal()
+```
+
+
+```{r}
+ggplot(drop_na, aes(duration)) +
+  geom_histogram() +
+  facet_wrap(~genre, scales = "free")
+
+ggplot(drop_na, aes(duration)) +
+  geom_histogram()
+#filmtv_mod[duration > 500, .N, by = genre] #21
+#filmtv_mod[duration > 500, duration := NA]
+```
+
+
+#f,g: #Adjusted R-squared:  0.1242, nem túl jó a modell. Az átlagos szavazatot befolyásoló jelentõs változók maradtak ki. 
+```{r}
+reg <- lm(avg_vote ~ . - genre_Western + I(votes^2) + I(duration*genre_Noir), data = filmtv_mod_numeric)
+summary(reg)
+```
