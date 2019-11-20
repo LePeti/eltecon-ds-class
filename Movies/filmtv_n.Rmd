@@ -1,0 +1,257 @@
+---
+title: "filmtv_n"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(fig.width = 12)
+knitr::opts_chunk$set(fig.align = 'center')
+```
+
+
+```{r}
+library(data.table)
+library(ggplot2)
+library(magrittr)
+library(purrr)
+library(fastDummies)
+library(caret)
+```
+
+
+```{r}
+filmtv <- fread("data/filmtv_movies.csv", stringsAsFactors = TRUE)
+summary(filmtv)
+levels(filmtv$genre)
+```
+
+
+```{r}
+ggplot(filmtv, aes(duration)) +
+  geom_histogram()
+
+ggplot(filmtv, aes(duration)) +
+  geom_histogram() +
+  facet_wrap(~genre, scales = "free")
+  
+filmtv[duration > 500, .N, by = genre] #21
+filmtv_mod <- filmtv[duration > 500, duration := NA]
+```
+
+
+```{r}
+filmtv_mod <- filmtv[genre == "" | genre == "MĂ©lo", genre := NA]
+filmtv_mod[, genre := droplevels(genre)]
+summary(filmtv_mod)
+filmtv_mod[, .N, by = genre]
+levels(filmtv_mod$genre)
+```
+
+
+```{r}
+drop_na <- filmtv_mod[genre != is.na(genre)]
+drop_na <- drop_na[duration != is.na(duration)]
+levels(drop_na$genre)
+summary(drop_na)
+
+filmtv_mod_genre_dummies <- dummy_cols(drop_na, select_columns = "genre")
+```
+
+
+#4. házi
+#2. Van-e hatása a szavazatok számának az átlagos értékelésre?
+#3a
+```{r}
+ggplot(filmtv_mod_genre_dummies, aes(x = votes, y = avg_vote)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+```
+
+
+#b
+```{r}
+filmtv_mod_numeric <- filmtv_mod_genre_dummies[, c(5, 9, 10, 13:38)]
+corr <- cor(filmtv_mod_numeric)
+corr[corr > abs(0.15) & corr!= abs(1)]
+```
+
+
+#c, d
+```{r}
+reg <- lm(avg_vote ~ . - genre_Western - votes - duration, data = filmtv_mod_numeric)
+summary(reg)
+
+residuals <- data.table(residuals = reg$residuals, fitted = reg$fitted.values)
+ggplot(residuals, aes(fitted, residuals)) +
+  geom_point(alpha = .3) +
+  theme_minimal()
+
+#véletlenszerűnek tűnik, a valós és a becsült értékek között nincs további előrejelezhető kapcsolat.
+
+#residuals_x <- data.table(residuals = reg$residuals, filmtv_mod_numeric)
+#ggplot(residuals_x, aes(votes, residuals)) +
+#  geom_point(alpha = .3) +
+#  theme_minimal()
+```
+
+
+#e
+```{r}
+reg <- lm(avg_vote ~ . - genre_Western + I(votes^2) + I(votes^3) + I(votes^4) + I(votes^5), data = filmtv_mod_numeric)
+summary(reg)
+
+residuals <- data.table(residuals = reg$residuals, fitted = reg$fitted.values)
+ggplot(residuals, aes(fitted, residuals)) +
+  geom_point(alpha = .3) +
+  theme_minimal()
+
+#residuals_x <- data.table(residuals = reg$residuals, filmtv_mod_numeric)
+#ggplot(residuals_x, aes(votes, residuals)) +
+#  geom_point(alpha = .3) +
+#  theme_minimal()
+```
+
+
+```{r}
+#interakció választás
+ggplot(drop_na, aes(duration)) +
+  geom_histogram() +
+  facet_wrap(~genre, scales = "free")
+  
+ggplot(drop_na, aes(duration)) +
+  geom_histogram()
+```
+
+
+#f,g: #Adjusted R-squared:  0.1242, nem túl jó a modell, nem ileszkedik eléggé az adatokra.
+```{r}
+reg <- lm(avg_vote ~ . - genre_Western + I(votes^2) + I(duration*genre_Noir), data = filmtv_mod_numeric)
+summary(reg)
+```
+
+
+```{r}
+#5. házi
+#3 Answer your question using what we’ve learned previously and today
+#a. Select a set of candidate models with different complexity (i.e.: different
+#variable sets)
+
+#a
+reg_2 <- lm(avg_vote ~ . - genre_Western + I(votes^2) + I(duration*genre_Noir), data = filmtv_mod_numeric)
+summary(reg_2)
+#Residual standard error: 1.424
+MSE_train_2 = sqrt(1.424)
+
+
+#b
+reg_3 <- lm(avg_vote ~ . - genre_Western + I(votes^2) + I(votes^3) + I(duration*genre_Noir), data = filmtv_mod_numeric)
+summary(reg_3)
+#Residual standard error: 1.422
+MSE_train_3 = sqrt(1.422)
+
+#c
+reg_7 <- lm(avg_vote ~ . - genre_Western + I(votes^2) + I(votes^3) +
+I(votes^4) + I(votes^5) + I(votes^6) + I(votes^7) + I(duration*genre_Noir), data = filmtv_mod_numeric)
+summary(reg_7)
+#Residual standard error: 1.421
+MSE_train_7 = sqrt(1.421)
+```
+
+
+```{r}
+#b. Separate a validation set from your data
+
+fold <- 5
+n <- nrow(filmtv_mod_numeric)
+set.seed(65445)
+split <- split(sample(1:n), 1:fold) #5 csoportba rendezi az adatok sorszámait
+test_ <- unlist(split[5])
+train_ <- unlist(split[c(1:4)])
+test <- filmtv_mod_numeric[test_]
+train <- filmtv_mod_numeric[train_]
+```
+
+
+```{r}
+
+#c. Fit all the candidate regressions on the rest of your data
+
+#a
+model <- lm(formula_2, data = train)
+p <- predict(model, test)
+MSE_test_2 = mean((p - test[, avg_vote])^2)
+
+#b
+model <- lm(formula_3, data = train)
+p <- predict(model, test)
+MSE_test_3 = mean((p - test[, avg_vote])^2)
+
+#c
+model <- lm(formula_7, data = train)
+p <- predict(model, test)
+MSE_test_7 = mean((p - test[, avg_vote])^2)
+```
+
+
+```{r}
+#d. Compare the fit of your models on the train and validation data
+
+train_test <- data.table(c(2, 3, 7), model = c("a", "b", "c"), 
+           `train MSE` = c(MSE_train_2, MSE_train_3, MSE_train_7),
+           `test MSE` = c(MSE_test_2, MSE_test_3, MSE_test_7))
+train_test
+
+#A "train" és a "test" adatokra is a c modell illeszkedik a "legjobban".
+```
+
+
+```{r}
+
+#e. Perform cross-validation of your models
+train_control <- trainControl(method = "cv", number = 5)
+
+#a
+set.seed(2698)
+model_2 <- train(formula_2,
+               data = filmtv_mod_numeric,
+               trControl = train_control,
+               method = "lm")
+
+model_2$resample
+cv_MSE_2 <- model$results$RMSE**2
+
+#b
+model_3 <- train(formula_3,
+               data = filmtv_mod_numeric,
+               trControl = train_control,
+               method = "lm")
+
+model_3$resample
+cv_MSE_3 <- model$results$RMSE**2
+
+#c
+set.seed(2698)
+model_7 <- train(formula_7,
+               data = filmtv_mod_numeric,
+               trControl = train_control,
+               method = "lm")
+
+model$resample
+cv_MSE_7 <- model_7$results$RMSE**2
+```
+
+
+```{r}
+#g. Conclude on your models in terms of their prediction performance
+
+data.table(train_test, `cv MSE` = c(cv_MSE_2, cv_MSE_3, cv_MSE_7))
+
+#Az összes modell előrejelzési képessége rossz, a különbségek minimálisak. Cross validation szempontjából is a c modell mondható "legjobbnak".
+```
